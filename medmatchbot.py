@@ -146,11 +146,20 @@ def view_profile(message):
 def home():
     return "Bot is running!"
 
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route(f"/{BOT_TOKEN}", methods=['POST'])
+def getMessage():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "!", 200
+
+@app.route("/")
+def webhook():
+    bot.remove_webhook()
+    bot.set_webhook(url='https://medmatchbot.onrender.com/' + BOT_TOKEN)
+    return "Bot is running!", 200
+
 if __name__ == "__main__":
-    import threading
-
-    def run_bot():
-        bot.polling(non_stop=True, interval=0)
-
-    threading.Thread(target=run_bot).start()
-    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
