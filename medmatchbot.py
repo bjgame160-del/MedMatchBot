@@ -50,18 +50,17 @@ def get_likes(message):
 def get_dislikes(message):
     users[message.chat.id]["dislikes"] = message.text
     users[message.chat.id]["stars"] = 1
-
     # Notify admin about new registration (basic profile)
-admin_msg = (
-    f"📩 New registration started:\n"
-    f"👤 Name: {users[message.chat.id].get('name')}\n"
-    f"⚧ Gender: {users[message.chat.id].get('gender')}\n"
-    f"📍 State: {users[message.chat.id].get('state')}\n"
-    f"🎓 Year: {users[message.chat.id].get('year')}\n"
-    f"❤️ Likes: {users[message.chat.id].get('likes')}\n"
-    f"💔 Dislikes: {users[message.chat.id].get('dislikes')}\n"
-)
-bot.send_message(int(ADMIN_ID), admin_msg)
+    admin_msg = (
+        f"📩 New registration started:\n"
+        f"👤 Name: {users[message.chat.id].get('name')}\n"
+        f"⚧ Gender: {users[message.chat.id].get('gender')}\n"
+        f"📍 State: {users[message.chat.id].get('state')}\n"
+        f"🎓 Year: {users[message.chat.id].get('year')}\n"
+        f"❤️ Likes: {users[message.chat.id].get('likes')}\n"
+        f"💔 Dislikes: {users[message.chat.id].get('dislikes')}\n"
+    )
+    bot.send_message(int(ADMIN_ID), admin_msg)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪", "View Profile ⭐")
     bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
