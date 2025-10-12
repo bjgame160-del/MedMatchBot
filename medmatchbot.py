@@ -420,7 +420,7 @@ app = Flask(__name__)
 def home():
     return "MedMatchBot is running 💘"
 
-@app.route('/' + TOKEN, methods=['POST'])
+@app.route('/' + BOT_TOKEN, methods=['POST'])
 def getMessage():
     json_str = request.get_data().decode('UTF-8')
     update = telebot.types.Update.de_json(json_str)
