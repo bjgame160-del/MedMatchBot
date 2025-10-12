@@ -62,7 +62,6 @@ admin_msg = (
     f"💔 Dislikes: {users[message.chat.id].get('dislikes')}\n"
 )
 bot.send_message(int(ADMIN_ID), admin_msg)
-
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪", "View Profile ⭐")
     bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
