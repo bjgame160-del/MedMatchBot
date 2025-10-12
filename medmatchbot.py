@@ -1,182 +1,114 @@
-import logging
 import os
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    ConversationHandler,
-    ContextTypes,
-    filters,
-)
+import telebot
+from telebot import types
 from flask import Flask
 
-# --- Keep Render alive by opening a web port ---
-app = Flask(__name__)
+# Load environment variables
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+ADMIN_ID = os.getenv("ADMIN_ID")
 
-@app.route('/')
-def home():
-    return "Bot is running fine!"
+bot = telebot.TeleBot(BOT_TOKEN)
+server = Flask(__name__)
 
-# --- Telegram Bot Setup ---
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+users = {}
+user_photos = {}
 
-# --- Steps in registration ---
-NAME, GENDER, YEAR, STATE, LIKES, DISLIKES, INSTAGRAM, PHOTO = range(8)
+# Start command
+@bot.message_handler(commands=['start'])
+def start(message):
+    chat_id = message.chat.id
+    users[chat_id] = {"stars": 0}
+    bot.send_message(chat_id, "👋 Welcome to *MedicoMatch!* Let's create your profile.", parse_mode="Markdown")
+    bot.send_message(chat_id, "What's your *name*?")
+    bot.register_next_step_handler(message, get_name)
 
-# --- Your Telegram ID (admin) ---
-ADMIN_CHAT_ID = 6371731528
+def get_name(message):
+    users[message.chat.id]["name"] = message.text
+    bot.send_message(message.chat.id, "What's your *gender?* (Male/Female/Other)")
+    bot.register_next_step_handler(message, get_gender)
 
-# --- Start command ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Welcome to the MatchMate Bot!\n\n"
-        "Let's set up your profile.\n\n"
-        "Please tell me your *name*.",
-        parse_mode="Markdown"
-    )
-    return NAME
+def get_gender(message):
+    users[message.chat.id]["gender"] = message.text
+    bot.send_message(message.chat.id, "In which *state* is your medical college?")
+    bot.register_next_step_handler(message, get_state)
 
+def get_state(message):
+    users[message.chat.id]["state"] = message.text
+    bot.send_message(message.chat.id, "Which *year* are you in? (e.g., 1st year, 2nd year, Internship, etc.)")
+    bot.register_next_step_handler(message, get_year)
 
-async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["name"] = update.message.text
-    await update.message.reply_text(
-        "🚻 Please select your gender:",
-        reply_markup=ReplyKeyboardMarkup([["Male", "Female"]], one_time_keyboard=True)
-    )
-    return GENDER
+def get_year(message):
+    users[message.chat.id]["year"] = message.text
+    bot.send_message(message.chat.id, "Which subjects do you *like most*?")
+    bot.register_next_step_handler(message, get_likes)
 
+def get_likes(message):
+    users[message.chat.id]["likes"] = message.text
+    bot.send_message(message.chat.id, "Which subjects do you *dislike*?")
+    bot.register_next_step_handler(message, get_dislikes)
 
-async def get_gender(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["gender"] = update.message.text
-    await update.message.reply_text("🎓 Enter your college year (e.g. 1st, 2nd, 3rd, 4th):")
-    return YEAR
+def get_dislikes(message):
+    users[message.chat.id]["dislikes"] = message.text
+    users[message.chat.id]["stars"] = 1
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪", "View Profile ⭐")
+    bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
 
+@bot.message_handler(func=lambda m: m.text == "Enter Instagram Username 📸")
+def get_insta(message):
+    bot.send_message(message.chat.id, "Send your Instagram username (without @):")
+    bot.register_next_step_handler(message, save_insta)
 
-async def get_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["year"] = update.message.text
-    await update.message.reply_text("📍 Enter your *state* name:", parse_mode="Markdown")
-    return STATE
+def save_insta(message):
+    insta = message.text.strip().replace("@", "")
+    users[message.chat.id]["instagram"] = insta
+    users[message.chat.id]["stars"] = 2
+    bot.send_message(message.chat.id, f"✅ Insta handle saved.\nYou earned ⭐⭐ (2 Stars)\nYou can now find matches.")
+    bot.send_message(int(ADMIN_ID), f"📩 New Insta from {users[message.chat.id]['name']}: @{insta}")
 
+@bot.message_handler(func=lambda m: m.text == "Upload Selfie/College ID 🪪")
+def ask_photo(message):
+    bot.send_message(message.chat.id, "Please upload your selfie or college ID photo 📸")
+    bot.register_next_step_handler(message, save_photo)
 
-async def get_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["state"] = update.message.text
-    await update.message.reply_text("💬 Tell me a few of your *likes*:", parse_mode="Markdown")
-    return LIKES
+def save_photo(message):
+    if message.photo:
+        file_id = message.photo[-1].file_id
+        users[message.chat.id]["photo_id"] = file_id
+        users[message.chat.id]["stars"] = 3
+        bot.send_message(message.chat.id, "✅ Photo uploaded successfully!\nYou are now ⭐⭐⭐ *Fully Verified!*", parse_mode="Markdown")
+        bot.send_message(int(ADMIN_ID), f"📩 New verification photo from {users[message.chat.id]['name']}")
+        bot.send_photo(int(ADMIN_ID), file_id)
+    else:
+        bot.send_message(message.chat.id, "Please send a valid photo.")
 
-
-async def get_likes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["likes"] = update.message.text
-    await update.message.reply_text("🚫 Now tell me some of your *dislikes*:", parse_mode="Markdown")
-    return DISLIKES
-
-
-async def get_dislikes(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["dislikes"] = update.message.text
-    await update.message.reply_text(
-        "📱 Share your *Instagram ID* (or type 'none' if you don’t want to):",
-        parse_mode="Markdown"
-    )
-    return INSTAGRAM
-
-
-async def get_instagram(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["instagram"] = update.message.text
-    await update.message.reply_text(
-        "📸 Please upload a *selfie* for verification.\n\n"
-        "Users who upload a selfie get a ⭐⭐⭐ (3-star) verified profile!",
-        parse_mode="Markdown"
-    )
-    return PHOTO
-
-
-async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["photo_uploaded"] = True
-
-    await update.message.reply_text("✅ Registration complete! You now have a ⭐⭐⭐ verified profile!")
-
-    # Send user info to admin
-    msg = (
-        f"🆕 *New Registration*\n\n"
-        f"👤 Name: {context.user_data.get('name')}\n"
-        f"🚻 Gender: {context.user_data.get('gender')}\n"
-        f"🎓 Year: {context.user_data.get('year')}\n"
-        f"📍 State: {context.user_data.get('state')}\n"
-        f"💬 Likes: {context.user_data.get('likes')}\n"
-        f"🚫 Dislikes: {context.user_data.get('dislikes')}\n"
-        f"📱 Instagram: {context.user_data.get('instagram')}\n"
-        f"📸 Photo: Uploaded ✅"
-    )
-
-    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg, parse_mode="Markdown")
-
-    if update.message.photo:
-        file_id = update.message.photo[-1].file_id
-        await context.bot.send_photo(chat_id=ADMIN_CHAT_ID, photo=file_id, caption=f"Selfie of {context.user_data.get('name')}")
-
-    return ConversationHandler.END
-
-
-async def skip_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["photo_uploaded"] = False
-    await update.message.reply_text("✅ Registration complete! You now have a ⭐⭐ (2-star) profile.")
-
-    msg = (
-        f"🆕 *New Registration*\n\n"
-        f"👤 Name: {context.user_data.get('name')}\n"
-        f"🚻 Gender: {context.user_data.get('gender')}\n"
-        f"🎓 Year: {context.user_data.get('year')}\n"
-        f"📍 State: {context.user_data.get('state')}\n"
-        f"💬 Likes: {context.user_data.get('likes')}\n"
-        f"🚫 Dislikes: {context.user_data.get('dislikes')}\n"
-        f"📱 Instagram: {context.user_data.get('instagram')}\n"
-        f"📸 Photo: Not uploaded ❌"
-    )
-
-    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg, parse_mode="Markdown")
-    return ConversationHandler.END
-
-
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Registration cancelled.")
-    return ConversationHandler.END
-
-
-def main():
-    TOKEN = os.getenv("BOT_TOKEN")  # Get bot token from environment variable
-    if not TOKEN:
-        print("❌ BOT_TOKEN not set in environment variables.")
+@bot.message_handler(func=lambda m: m.text == "View Profile ⭐")
+def view_profile(message):
+    user = users.get(message.chat.id)
+    if not user:
+        bot.send_message(message.chat.id, "No profile found. Type /start to begin.")
         return
-
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            GENDER: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_gender)],
-            YEAR: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_year)],
-            STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_state)],
-            LIKES: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_likes)],
-            DISLIKES: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_dislikes)],
-            INSTAGRAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_instagram)],
-            PHOTO: [
-                MessageHandler(filters.PHOTO, get_photo),
-                CommandHandler("skip", skip_photo),
-            ],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
+    info = (
+        f"👤 *Name:* {user.get('name')}\n"
+        f"⚧ *Gender:* {user.get('gender')}\n"
+        f"📍 *State:* {user.get('state')}\n"
+        f"🎓 *Year:* {user.get('year')}\n"
+        f"❤️ *Likes:* {user.get('likes')}\n"
+        f"💔 *Dislikes:* {user.get('dislikes')}\n"
+        f"⭐ *Verification:* {user.get('stars')} Stars\n"
     )
+    bot.send_message(message.chat.id, info, parse_mode="Markdown")
 
-    application.add_handler(conv_handler)
-    application.run_polling(stop_signals=None)
-
+# Flask server for Render keep-alive
+@server.route('/')
+def home():
+    return "Bot is running!"
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-    main()
+    import threading
+
+    def run_bot():
+        bot.polling(non_stop=True, interval=0)
+
+    threading.Thread(target=run_bot).start()
+    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
