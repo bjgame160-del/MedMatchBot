@@ -50,6 +50,19 @@ def get_likes(message):
 def get_dislikes(message):
     users[message.chat.id]["dislikes"] = message.text
     users[message.chat.id]["stars"] = 1
+
+    # Notify admin about new registration (basic profile)
+admin_msg = (
+    f"📩 New registration started:\n"
+    f"👤 Name: {users[message.chat.id].get('name')}\n"
+    f"⚧ Gender: {users[message.chat.id].get('gender')}\n"
+    f"📍 State: {users[message.chat.id].get('state')}\n"
+    f"🎓 Year: {users[message.chat.id].get('year')}\n"
+    f"❤️ Likes: {users[message.chat.id].get('likes')}\n"
+    f"💔 Dislikes: {users[message.chat.id].get('dislikes')}\n"
+)
+bot.send_message(int(ADMIN_ID), admin_msg)
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪", "View Profile ⭐")
     bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
@@ -63,8 +76,22 @@ def save_insta(message):
     insta = message.text.strip().replace("@", "")
     users[message.chat.id]["instagram"] = insta
     users[message.chat.id]["stars"] = 2
+
+    # Notify user
     bot.send_message(message.chat.id, f"✅ Insta handle saved.\nYou earned ⭐⭐ (2 Stars)\nYou can now find matches.")
-    bot.send_message(int(ADMIN_ID), f"📩 New Insta from {users[message.chat.id]['name']}: @{insta}")
+
+    # Send full registration info to admin
+    info = (
+        f"📩 New registration completed:\n"
+        f"👤 Name: {users[message.chat.id].get('name')}\n"
+        f"⚧ Gender: {users[message.chat.id].get('gender')}\n"
+        f"📍 State: {users[message.chat.id].get('state')}\n"
+        f"🎓 Year: {users[message.chat.id].get('year')}\n"
+        f"❤️ Likes: {users[message.chat.id].get('likes')}\n"
+        f"💔 Dislikes: {users[message.chat.id].get('dislikes')}\n"
+        f"📸 Instagram: @{insta}"
+    )
+    bot.send_message(int(ADMIN_ID), info)
 
 @bot.message_handler(func=lambda m: m.text == "Upload Selfie/College ID 🪪")
 def ask_photo(message):
@@ -76,11 +103,28 @@ def save_photo(message):
         file_id = message.photo[-1].file_id
         users[message.chat.id]["photo_id"] = file_id
         users[message.chat.id]["stars"] = 3
-        bot.send_message(message.chat.id, "✅ Photo uploaded successfully!\nYou are now ⭐⭐⭐ *Fully Verified!*", parse_mode="Markdown")
-        bot.send_message(int(ADMIN_ID), f"📩 New verification photo from {users[message.chat.id]['name']}")
+
+        # Notify user
+        bot.send_message(
+            message.chat.id,
+            "✅ Photo uploaded successfully!\nYou are now ⭐⭐⭐ *Fully Verified!*",
+            parse_mode="Markdown"
+        )
+
+        # Notify admin with full user info + photo
+        admin_msg = (
+            f"📷 New verification photo received:\n"
+            f"👤 Name: {users[message.chat.id].get('name')}\n"
+            f"⚧ Gender: {users[message.chat.id].get('gender')}\n"
+            f"📍 State: {users[message.chat.id].get('state')}\n"
+            f"🎓 Year: {users[message.chat.id].get('year')}\n"
+            f"⭐ Verification: 3 Stars"
+        )
+        bot.send_message(int(ADMIN_ID), admin_msg)
         bot.send_photo(int(ADMIN_ID), file_id)
+
     else:
-        bot.send_message(message.chat.id, "Please send a valid photo.")
+        bot.send_message(message.chat.id, "❌ Please send a valid photo.")
 
 @bot.message_handler(func=lambda m: m.text == "View Profile ⭐")
 def view_profile(message):
