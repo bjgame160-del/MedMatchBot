@@ -27,8 +27,8 @@ if not is_user_in_channel(chat_id):
         f"👉 [Join Here]({CHANNEL_LINK})\n\n"
         "After joining, press /start again."
  )  
-bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
-    return
+bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True
+return
 server = Flask(__name__)
 
 # ───────────────────────────────
