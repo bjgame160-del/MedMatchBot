@@ -123,11 +123,12 @@ def get_dislikes(message):
     user_id = message.chat.id
     save_user_data(user_id, "dislikes", message.text)
     save_user_data(user_id, "stars", 1)
-markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪")
-markup.add("Find Match 💞", "View Profile ⭐")
-bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
-bot.send_message(ADMIN_ID, f"🆕 New user registered: {message.from_user.first_name} ({user_id})")
+    
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪")
+    markup.add("Find Match 💞", "View Profile ⭐")
+    bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
+    bot.send_message(ADMIN_ID, f"🆕 New user registered: {message.from_user.first_name} ({user_id})")
 
 # ───────────────────────────────
 #  Instagram & Verification
