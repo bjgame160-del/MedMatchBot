@@ -12,6 +12,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "6371731528"))   # your admin ID
 bot = telebot.TeleBot(BOT_TOKEN)
 CHANNEL_USERNAME = "@medicosssssssss"  
+CHANNEL_LINK = "https://t.me/medicosssssssss"
 
 def is_user_in_channel(user_id):
     try:
@@ -20,6 +21,14 @@ def is_user_in_channel(user_id):
     except Exception as e:
         print("Error checking channel membership:", e)
         return False
+if not is_user_in_channel(chat_id):
+    join_text = (
+        "🚨 To use this bot, you must first join our official channel!\n\n"
+        f"👉 [Join Here]({CHANNEL_LINK})\n\n"
+        "After joining, press /start again."
+    )
+    bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
+    return
 server = Flask(__name__)
 
 # ───────────────────────────────
