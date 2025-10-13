@@ -1,4 +1,4 @@
-import os
+allimport os
 import sqlite3
 import telebot
 from telebot import types
@@ -28,7 +28,7 @@ if not is_user_in_channel(chat_id):
         "After joining, press /start again."
  )  
 bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
-return
+    return
 server = Flask(__name__)
 
 # ───────────────────────────────
