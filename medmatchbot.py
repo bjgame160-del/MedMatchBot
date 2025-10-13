@@ -3,7 +3,6 @@ import sqlite3
 import telebot
 from telebot import types
 from flask import Flask
-import random
 
 # ───────────────────────────────
 #  Configuration
@@ -11,16 +10,24 @@ import random
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "6371731528"))   # your admin ID
 bot = telebot.TeleBot(BOT_TOKEN)
-CHANNEL_USERNAME = "@medicosssssssss"  
-CHANNEL_LINK = "https://t.me/medicosssssssss"
+
+# 🔹 Channel details
+CHANNEL_USERNAME = "@medicosssssssss"   # For membership check
+CHANNEL_LINK = "https://t.me/medicosssssssss"  # For clickable link
 
 def is_user_in_channel(user_id):
     try:
         member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        print("Membership status:", member.status)  # debug log
         return member.status in ['member', 'administrator', 'creator']
     except Exception as e:
         print("Error checking channel membership:", e)
         return False
+
+# ───────────────────────────────
+#  Flask Server (for hosting)
+# ───────────────────────────────
+server = Flask(__name__)
 
 # ───────────────────────────────
 #  Database Setup
@@ -69,21 +76,19 @@ init_db()
 #  Registration Flow
 # ───────────────────────────────
 @bot.message_handler(commands=['start'])
-@bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
 
-    # 🔹 Check if user is in channel
     if not is_user_in_channel(chat_id):
         join_text = (
-            "🚨 To use this bot, you must first join our official channel!\n\n"
-            f"👉 [Join Here]({CHANNEL_USERNAME})\n\n"
+            "🚨 To use this bot, you must first join our official channel!<br><br>"
+            f"👉 <a href='{CHANNEL_LINK}'>Join Here</a><br><br>"
             "After joining, press /start again."
         )
-        bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
+        bot.send_message(chat_id, join_text, parse_mode="HTML", disable_web_page_preview=True)
         return
 
-    # If joined, continue registration
+    bot.send_message(chat_id, "✅ You are verified! Let's continue your registration...")
     users[chat_id] = {"stars": 0}
     bot.send_message(chat_id, "👋 Welcome to *MedMatch!* Let's create your profile.", parse_mode="Markdown")
     bot.send_message(chat_id, "What's your *name*?")
