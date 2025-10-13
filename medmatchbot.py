@@ -428,7 +428,7 @@ def help_cmd(message):
         "✨ Higher star users have access to better matches!",
         parse_mode="Markdown"
     )
-    @bot.callback_query_handler(func=lambda call: call.data.startswith("accept_") or call.data.startswith("decline_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("accept_") or call.data.startswith("decline_")
 def handle_match_response(call):
     action, requester_id = call.data.split("_")
     requester_id = int(requester_id)
