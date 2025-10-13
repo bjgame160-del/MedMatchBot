@@ -11,6 +11,15 @@ import random
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "6371731528"))   # your admin ID
 bot = telebot.TeleBot(BOT_TOKEN)
+CHANNEL_USERNAME = "https://t.me/medicosssssssss"  
+
+def is_user_in_channel(user_id):
+    try:
+        member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        return member.status in ['member', 'administrator', 'creator']
+    except Exception as e:
+        print("Error checking channel membership:", e)
+        return False
 server = Flask(__name__)
 
 # ───────────────────────────────
@@ -60,15 +69,24 @@ init_db()
 #  Registration Flow
 # ───────────────────────────────
 @bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'])
 def start(message):
-    user_id = message.chat.id
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO users (user_id, stars) VALUES (?,0)", (user_id,))
-    conn.commit()
-    conn.close()
-    bot.send_message(user_id, "👋 Welcome to *MedMatchBot!* Let's set up your profile.", parse_mode="Markdown")
-    bot.send_message(user_id, "What's your *name*?")
+    chat_id = message.chat.id
+
+    # 🔹 Check if user is in channel
+    if not is_user_in_channel(chat_id):
+        join_text = (
+            "🚨 To use this bot, you must first join our official channel!\n\n"
+            f"👉 [Join Here]({CHANNEL_USERNAME})\n\n"
+            "After joining, press /start again."
+        )
+        bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
+        return
+
+    # If joined, continue registration
+    users[chat_id] = {"stars": 0}
+    bot.send_message(chat_id, "👋 Welcome to *MedMatch!* Let's create your profile.", parse_mode="Markdown")
+    bot.send_message(chat_id, "What's your *name*?")
     bot.register_next_step_handler(message, get_name)
 
 def get_name(message):
@@ -105,9 +123,10 @@ def get_dislikes(message):
     user_id = message.chat.id
     save_user_data(user_id, "dislikes", message.text)
     save_user_data(user_id, "stars", 1)
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪", "Find Match 💞", "View Profile ⭐")
-    bot.send_message(user_id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
+markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+markup.add("Enter Instagram Username 📸", "Upload Selfie/College ID 🪪")
+markup.add("Find Match 💞", "View Profile ⭐")
+bot.send_message(message.chat.id, "✅ Basic profile completed! You earned ⭐ (1 Star)", reply_markup=markup)
     bot.send_message(ADMIN_ID, f"🆕 New user registered: {message.from_user.first_name} ({user_id})")
 
 # ───────────────────────────────
@@ -409,7 +428,69 @@ def help_cmd(message):
         "✨ Higher star users have access to better matches!",
         parse_mode="Markdown"
     )
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("accept_") or call.data.startswith("decline_"))
+def handle_match_response(call):
+    action, requester_id = call.data.split("_")
+    requester_id = int(requester_id)
+    responder_id = call.message.chat.id
 
+    if action == "accept":
+        bot.send_message(requester_id, "🎉 Your match accepted! You can now chat here. Type /endchat to stop.")
+        bot.send_message(responder_id, "💬 You accepted the match! Start chatting now. Type /endchat to stop.")
+        users[requester_id]["chat_partner"] = responder_id
+        users[responder_id]["chat_partner"] = requester_id
+    else:
+        bot.send_message(requester_id, "❌ Your match request was declined.")
+        bot.send_message(responder_id, "✅ You declined the match.")
+        @bot.message_handler(func=lambda m: True)
+def forward_messages(message):
+    chat_partner = users.get(message.chat.id, {}).get("chat_partner")
+    if chat_partner:
+        bot.send_message(chat_partner, f"{users[message.chat.id]['name']}: {message.text}")
+
+@bot.message_handler(func=lambda m: m.text == "Find Match 💞")
+def find_match(message):
+    user = users.get(message.chat.id)
+    if not user:
+        bot.send_message(message.chat.id, "⚠️ You need to complete your profile first. Type /start.")
+        return
+
+    user_star = user.get("stars", 0)
+    user_gender = user.get("gender", "").lower()
+
+    if user_star < 2:
+        bot.send_message(message.chat.id, "⭐ You need at least 2 stars to find a match.")
+        return
+
+    # Find compatible users
+    for uid, data in users.items():
+        if uid == message.chat.id:
+            continue
+
+        if data.get("gender", "").lower() == user_gender:
+            continue  # skip same gender
+
+        # 2-star users can match only with 2-star
+        if user_star == 2 and data.get("stars", 0) != 2:
+            continue
+
+        # 3-star users can match with 2 or 3
+        if user_star == 3 and data.get("stars", 0) not in [2, 3]:
+            continue
+
+        # Match found
+        bot.send_message(message.chat.id, f"💞 You’ve got a potential match: *{data.get('name')}*! Sending request...", parse_mode="Markdown")
+        bot.send_message(uid, f"💌 You’ve got a match request from *{user.get('name')}*! Accept?", parse_mode="Markdown")
+
+        # Inline buttons for Accept/Decline
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("✅ Accept", callback_data=f"accept_{message.chat.id}"),
+                   types.InlineKeyboardButton("❌ Decline", callback_data=f"decline_{message.chat.id}"))
+        bot.send_message(uid, "Would you like to accept this chat?", reply_markup=markup)
+        return
+
+    bot.send_message(message.chat.id, "😔 No suitable matches found right now. Try again later!")
+    
 # ───────────────────────────────
 #  Flask App (for Render deployment)
 # ───────────────────────────────
