@@ -442,7 +442,7 @@ def handle_match_response(call):
     else:
         bot.send_message(requester_id, "❌ Your match request was declined.")
         bot.send_message(responder_id, "✅ You declined the match.")
-        @bot.message_handler(func=lambda m: True)
+@bot.message_handler(func=lambda m: True)
 def forward_messages(message):
     chat_partner = users.get(message.chat.id, {}).get("chat_partner")
     if chat_partner:
