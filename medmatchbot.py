@@ -21,15 +21,6 @@ def is_user_in_channel(user_id):
     except Exception as e:
         print("Error checking channel membership:", e)
         return False
-if not is_user_in_channel(chat_id):
-    join_text = (
-        "🚨 To use this bot, you must first join our official channel!\n\n"
-        f"👉 [Join Here]({CHANNEL_LINK})\n\n"
-        "After joining, press /start again."
-) 
-bot.send_message(chat_id, join_text, parse_mode="Markdown", disable_web_page_preview=True)
-return
-server = Flask(__name__)
 
 # ───────────────────────────────
 #  Database Setup
