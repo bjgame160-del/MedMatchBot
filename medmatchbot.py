@@ -25,7 +25,7 @@ CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@medicosssssssss")  # for get_
 CHANNEL_LINK = os.getenv("CHANNEL_LINK", "https://t.me/medicosssssssss")  # for clickable link in messages
 
 # Optional webhook URL (if you deploy with webhooks)
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g. https://your-app.onrender.com/
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g. https://medmatchbot.onrender.com/
 
 # --- Database ---
 
