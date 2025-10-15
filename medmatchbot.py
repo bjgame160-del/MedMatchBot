@@ -507,7 +507,7 @@ def help_cmd(message):
 
 # --- Simple Flask webhook endpoints (if using webhooks) ---
 
-	app = Flask(__name__)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
