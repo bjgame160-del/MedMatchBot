@@ -507,16 +507,25 @@ def help_cmd(message):
 
 # --- Simple Flask webhook endpoints (if using webhooks) ---
 
-app = Flask(__name__)
+	app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "MedMatchBot is running 💘"
 
-if __name__ == '__main__':
+@app.route('/setwebhook', methods=['GET'])
+def set_webhook():
+    if not WEBHOOK_URL:
+        return "WEBHOOK_URL not configured", 400
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(url=WEBHOOK_URL.rstrip('/') + '/' + BOT_TOKEN)
+    return "Webhook set successfully!"
+
+if __name__ == "__main__":
     if WEBHOOK_URL:
         logging.info('Starting Flask app for webhook...')
-        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
     else:
         logging.info('Starting bot in polling mode...')
         bot.infinity_polling()
